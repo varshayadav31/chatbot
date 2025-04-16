@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Buddy</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f7fa;
+    }
+    #chat-container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      height: 500px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    .message {
+      margin-bottom: 15px;
+      padding: 12px 16px;
+      border-radius: 18px;
+      max-width: 75%;
+    }
+    .user-message {
+      background: #4361ee;
+      color: white;
+      margin-left: auto;
+    }
+    .bot-message {
+      background: #e9ecef;
+      margin-right: auto;
+    }
+    #input-container {
+      display: flex;
+      gap: 10px;
+    }
+    #question {
+      flex-grow: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+    }
+    #askButton {
+      padding: 12px 20px;
+      background: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    .typing-indicator {
+      display: inline-block;
+      padding: 10px 15px;
+      background: #e9ecef;
+      border-radius: 18px;
+    }
+    .typing-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6c757d;
+      margin: 0 2px;
+      animation: bounce 1.4s infinite;
+    }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Study Buddy</h1>
+  <div id="chat-container">
+    <div class="message bot-message">
+      Hello! I'm your Study Buddy. Ask me anything!
+    </div>
+  </div>
+  
+  <div id="input-container">
+    <input 
+      type="text" 
+      id="question" 
+      placeholder="Type your question..." 
+      autocomplete="off"
+    >
+    <button id="askButton">Ask</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const questionInput = document.getElementById('question');
+      const askButton = document.getElementById('askButton');
+      const chatContainer = document.getElementById('chat-container');
+      const API_URL = "http://127.0.0.1:5001/ask"; // Using 127.0.0.1 for reliability
+
+      // Handle Enter key
+      questionInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') askQuestion();
+      });
+
+      askButton.addEventListener('click', askQuestion);
+
+      async function askQuestion() {
+        const question = questionInput.value.trim();
+        if (!question) return;
+
+        // Add user message
+        addMessage(question, 'user');
+        questionInput.value = '';
+        askButton.disabled = true;
+
+        // Show typing indicator
+        const typingIndicator = document.createElement('div');
+        typingIndicator.className = 'message bot-message typing-indicator';
+        typingIndicator.innerHTML = `
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        `;
+        chatContainer.appendChild(typingIndicator);
+        scrollToBottom();
+
+        try {
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ question }),
+          });
+
+          if (!response.ok) throw new Error('Network response was not ok');
+          
+          const data = await response.json();
+          chatContainer.removeChild(typingIndicator);
+          addMessage(data.answer, 'bot');
+        } catch (error) {
+          console.error('Error:', error);
+          chatContainer.removeChild(typingIndicator);
+          addMessage("Sorry, I can't connect to the server. Please check:", 'bot');
+          addMessage("1. Is the backend running?", 'bot');
+          addMessage("2. Did you change ports?", 'bot');
+        } finally {
+          askButton.disabled = false;
+          questionInput.focus();
+        }
+      }
+
+      function addMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        messageDiv.textContent = text;
+        chatContainer.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      function scrollToBottom() {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    });
+  </script>
+</body>
+</html>
